@@ -1,0 +1,34 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build statically linked release binary
+        working-directory: service
+        run: |
+          make release
+          strip --strip-unneeded build/service-static
+          cp build/service-static ../user_registration_service-linux-x86_64
+
+      - name: Verify hardening
+        run: |
+          file user_registration_service-linux-x86_64
+          python3 -m pip install --quiet pwntools
+          checksec --file=user_registration_service-linux-x86_64 || true
+
+      - name: Upload release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: user_registration_service-linux-x86_64
+          generate_release_notes: true
