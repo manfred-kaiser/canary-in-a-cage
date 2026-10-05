@@ -11,15 +11,28 @@ permissions:
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
+    # Build on an old-but-still-maintained glibc baseline (Rocky Linux 8,
+    # glibc 2.28 from 2018) so the resulting dynamically linked binary
+    # loads on effectively any current x86-64 Linux distribution (glibc
+    # is forward-compatible: a binary built against an older glibc runs
+    # fine on a newer one, not vice versa). This keeps the exact same
+    # dynamic-linking exploitation surface as "build it yourself" - only
+    # the compiler/glibc version differs, which already affects offsets
+    # the same way any two independent builds would.
+    container:
+      image: rockylinux:8
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build statically linked release binary
+      - name: Install toolchain
+        run: dnf install -y git gcc make python3 python3-pip file
+
+      - name: Build hardened release binary
         working-directory: service
         run: |
-          make release
-          strip --strip-unneeded build/service-static
-          cp build/service-static ../user_registration_service-linux-x86_64
+          make
+          strip --strip-unneeded build/service
+          cp build/service ../user_registration_service-linux-x86_64
 
       - name: Verify hardening
         run: |

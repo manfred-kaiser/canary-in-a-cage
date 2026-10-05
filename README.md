@@ -217,24 +217,18 @@ echo "TRAINING{my_test_flag}" > build/flag.txt
 If you don't want to set up a full build toolchain, a precompiled
 binary is attached to each [GitHub Release](../../releases) of this
 repository (`user_registration_service-linux-x86_64`). It is built
-with the exact same hardening flags as above, but **statically
-linked** (`-static-pie`) specifically so that it runs on any x86-64
-Linux system without depending on the host's installed glibc version.
+with the exact same hardening flags and the exact same (dynamic)
+linking mode as above, just on an older glibc baseline (Rocky Linux 8,
+glibc 2.28) so the resulting binary loads on effectively any current
+x86-64 Linux system: glibc is forward-compatible, so a binary built
+against an older version keeps working on newer systems.
 
-Two things to know if you use it instead of building from source:
-
-- Because it is self-contained, there is no separately mapped libc to
-  work with — any code you need for your exploit chain lives inside
-  this one binary instead of being split across the binary and a
-  separate `libc.so`. The underlying vulnerabilities are identical
-  either way; only how you locate usable code in memory changes.
-- `checksec` will not report a `FORTIFY` line for this binary. This is
-  a detection limitation of `checksec` for statically linked binaries
-  (it looks for `*_chk` functions imported from a dynamic libc, which
-  a static binary doesn't have as imports), not an actual absence of
-  the protection — the compiler flag is identical to the dynamically
-  linked build, and the `*_chk` functions are still present inside the
-  binary itself.
+This means the exploitation surface is identical to building it
+yourself — there is still a separate libc mapped at runtime, and you
+still need to leak and work with its base address the same way. The
+one thing that differs, exactly as it would between any two of your
+own builds, is the specific compiler/glibc version, and therefore the
+concrete offsets and addresses you'll measure.
 
 Building it yourself (recommended, matches the rest of this exercise)
 remains the primary path; the release binary is a convenience option.
