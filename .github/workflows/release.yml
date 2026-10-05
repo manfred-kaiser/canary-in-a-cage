@@ -37,8 +37,12 @@ jobs:
       - name: Verify hardening
         run: |
           file user_registration_service-linux-x86_64
-          python3 -m pip install --quiet pwntools
-          checksec --file=user_registration_service-linux-x86_64 || true
+          echo "--- ELF type (expect: DYN, i.e. PIE) ---"
+          readelf -h user_registration_service-linux-x86_64 | grep Type
+          echo "--- dynamic section flags (expect BIND_NOW / FLAGS_1 NOW for Full RELRO) ---"
+          readelf -d user_registration_service-linux-x86_64 | grep -i "bind_now\|flags"
+          echo "--- program headers (expect a GNU_RELRO and GNU_STACK without E) ---"
+          readelf -l user_registration_service-linux-x86_64 | grep -i "relro\|gnu_stack"
 
       - name: Upload release asset
         uses: softprops/action-gh-release@v2
