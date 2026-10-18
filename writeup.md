@@ -1,14 +1,26 @@
 # canary-in-a-cage — Exploit Write-up
 
 ## TL;DR
-Claude did most of the work for me. Since I had an idea on how the exploit chain might
-look like and what kind of vulnerabilities to expect i could catch him early, when he
-got stuck with certain subtasks.
+Claude analyzed the source, found both vulnerabilities, and built the exploit chain, but
+its proposed solutions were partially wrong along the way: a same-connection
+exfiltration design that silently failed, a stack-alignment gadget it mistakenly removed
+while "fixing" something else, a wrong relative file path, and several gdb mistakes during
+the measurement sessions. None of these were caught by better reasoning alone. Each one
+only surfaced because I actually ran the exploit or the gdb session against the real
+binary and reported back exactly what happened, which is what let the real cause get
+diagnosed each time (see §5.2 for the full log).
 
-Claude read the README.md, read the source code, found the vulnerabilities in the source,
-chose the right tools (objdump, gdb) to observe the runtime behaviour, read the leaked
-canary value for exploiting the ROP Chain and then combined everything in a neat exploit
-script which works over multiple restarts of the vulnerable service.
+Before reading any code, I had already predicted from the assignment's own framing (a
+canary mentioned alongside a claim the service is exploitable anyway, plus CVE references
+all described as "client-controlled length" bugs) that there had to be an independent
+leak bug paired with a length-driven overflow (§2.0). That held up exactly once the source
+was read.
+
+Result: two cooperating bugs (an info leak via `CMD_STATUS`, an unbounded overflow via
+`CMD_REGISTER`) chained into a ROP-based, connect-back exploit that defeats all six active
+mitigations and survives server restarts and a live measurement (§3.3) showing exactly
+where a real CET shadow stack would have stopped it, on hardware that actually implements
+one.
 
 ## Models, token usage and observations
 
